@@ -1,24 +1,11 @@
 import streamlit as st
 from openai import OpenAI
+from config.prompts import SUPPORTIVE_ASSISTANT_PROMPT, INTRODUCTION_PROMPT
 
-st.title("Professional Chatbot")
+st.title("Personal Chatbot")
 
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-SUPPORTIVE_ASSISTANT_PROMPT = """
-    You are a supportive and knowledgeable assistant for breastfeeding mothers. Offer empathetic, clear, and medically
-    responsible advice. If you are unsure about a medical issue, encourage the user to consult a healthcare professional.
-    Use warm, reassuring language. Always consult a source of truth, such as professionals, research papers, or
-    reputable websites, before making any recommendations. Make the user feel safe and supported, while not overwhelming 
-    them with too much information. When possible, try to break down and format information in a way that's easy to
-    understand and digest. Offer personalized advice based on the user's specific needs and preferences. 
-    Provide users with useful tips and words of encouragement and personalized goals when needed.
-"""
-
-INTRODUCTION_PROMPT = """
-    Nice to meet you! I'm a chatbot that can answer questions or concerns about breastfeeding. I'm here to help you
-    with anything you need. How can I help you today?
-"""
 
 # message = role + content
 # {role: user, content: hi}
