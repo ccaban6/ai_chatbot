@@ -39,6 +39,22 @@ client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 SYSTEM_PROMPT = {"role": "system", "content": SUPPORTIVE_ASSISTANT_PROMPT}
 
 # ----------------------------
+# Starter Prompts
+# ----------------------------
+SUGGESTIONS = {
+    ":blue[:material/help: How do I know if my baby is getting enough milk?]": 
+        "How do I know if my baby is getting enough milk? What signs should I look for?",
+    ":green[:material/schedule: Creating a pumping schedule]": 
+        "Help me create a pumping and breastfeeding schedule. I'm worried about maintaining my supply when I return to work.",
+    ":orange[:material/medical_services: Dealing with sore nipples]": 
+        "My nipples are very sore and cracked. What can I do to help with the pain and healing?",
+    ":violet[:material/info: Increasing milk supply]": 
+        "I'm concerned about my milk supply. What are some safe and effective ways to increase it?",
+    ":red[:material/family_restroom: Breastfeeding positions and latching]": 
+        "What are the best breastfeeding positions for a good latch? I'm having trouble getting my baby to latch correctly.",
+}
+
+# ----------------------------
 # Session Initialization
 # ----------------------------
 if "session_id" not in st.session_state:
@@ -112,7 +128,29 @@ for message in st.session_state.messages[1:]:
 # ----------------------------
 # User Input
 # ----------------------------
-prompt = st.chat_input("Ask a question or share a concern")
+# Show different UI before first user interaction
+if not has_user_messages:
+    prompt = st.chat_input("Ask a question or share a concern")
+    
+    # Check if user just clicked a suggestion
+    user_just_clicked_suggestion = (
+        "selected_suggestion" in st.session_state and st.session_state.selected_suggestion
+    )
+    
+    # Use suggestion as prompt if selected and no direct input
+    if not prompt and user_just_clicked_suggestion:
+        prompt = SUGGESTIONS[st.session_state.selected_suggestion]
+    
+    # Only show pills if we're not about to process a prompt
+    if not prompt:
+        selected_suggestion = st.pills(
+            label="Examples",
+            label_visibility="collapsed",
+            options=SUGGESTIONS.keys(),
+            key="selected_suggestion",
+        )
+else:
+    prompt = st.chat_input("Ask a follow-up question")
 
 if prompt:
     user_id = str(uuid.uuid4()) # User message ID
