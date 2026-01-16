@@ -55,6 +55,48 @@ SUGGESTIONS = {
 }
 
 # ----------------------------
+# Escalation Detection
+# ----------------------------
+EMERGENCY_KEYWORDS = [
+    "can't breathe", "can't breath", "choking", "not breathing", "stopped breathing",
+    "unconscious", "passed out", "fainted", "seizure", "convulsion",
+    "severe bleeding", "heavy bleeding", "bleeding heavily",
+    "severe allergic reaction", "anaphylaxis", "throat closing",
+    "severe pain", "excruciating pain", "unbearable pain",
+    "high fever", "very high fever", "fever over 104", "fever 104",
+    "blue", "turning blue", "lips blue", "skin blue",
+    "emergency", "urgent", "immediately", "right now", "asap",
+    "call 911", "911", "ambulance", "er", "emergency room"
+]
+
+PROFESSIONAL_CONSULT_KEYWORDS = [
+    "persistent", "chronic", "ongoing", "continuing", "lasting",
+    "severe", "extreme", "intense", "worsening", "getting worse",
+    "infection", "infected", "mastitis", "abscess", "fever",
+    "blood", "bleeding", "discharge", "pus", "foul smell",
+    "lump", "mass", "hard area", "red streak", "redness spreading",
+    "medication", "prescription", "antibiotics", "drug",
+    "diagnosis", "diagnosed", "condition", "disease", "illness",
+    "doctor", "physician", "pediatrician", "lactation consultant",
+    "hospital", "clinic", "medical", "healthcare provider"
+]
+
+def detect_escalation(prompt):
+    """
+    Analyzes user prompt for emergency or professional consultation needs.
+    Returns a tuple: (is_emergency, needs_professional_consult)
+    """
+    prompt_lower = prompt.lower()
+    
+    # Check for emergency keywords
+    is_emergency = any(keyword in prompt_lower for keyword in EMERGENCY_KEYWORDS)
+    
+    # Check for professional consultation keywords
+    needs_professional = any(keyword in prompt_lower for keyword in PROFESSIONAL_CONSULT_KEYWORDS)
+    
+    return is_emergency, needs_professional
+
+# ----------------------------
 # Session Initialization
 # ----------------------------
 if "session_id" not in st.session_state:
@@ -129,19 +171,19 @@ for message in st.session_state.messages[1:]:
 # User Input
 # ----------------------------
 # Show different UI before first user interaction
+prompt = st.chat_input("Ask a question or share a concern")
 if not has_user_messages:
-    prompt = st.chat_input("Ask a question or share a concern")
     
     # Check if user just clicked a suggestion
     user_just_clicked_suggestion = (
         "selected_suggestion" in st.session_state and st.session_state.selected_suggestion
     )
+    # Only show pills if we're not about to process a prompt
     
     # Use suggestion as prompt if selected and no direct input
     if not prompt and user_just_clicked_suggestion:
         prompt = SUGGESTIONS[st.session_state.selected_suggestion]
-    
-    # Only show pills if we're not about to process a prompt
+
     if not prompt:
         selected_suggestion = st.pills(
             label="Examples",
@@ -149,9 +191,7 @@ if not has_user_messages:
             options=SUGGESTIONS.keys(),
             key="selected_suggestion",
         )
-else:
-    prompt = st.chat_input("Ask a follow-up question")
-
+        
 if prompt:
     user_id = str(uuid.uuid4()) # User message ID
 
@@ -165,11 +205,41 @@ if prompt:
         "content": prompt
     })
 
+
+    # ----------------------------
+    # Escalation Detection & Guidance
+    # ----------------------------
+    is_emergency, needs_professional = detect_escalation(prompt)
+    
+    if is_emergency:
+        st.error("""
+        ⚠️ **EMERGENCY SITUATION DETECTED**
+        
+        This appears to be a medical emergency. Please:
+        - **Call 911 or go to your nearest emergency room immediately**
+        - Do not wait for a response from this chatbot
+        - Seek immediate medical attention
+        
+        This chatbot is not a substitute for emergency medical care.
+        """)
+    
+    elif needs_professional:
+        st.warning("""
+        💡 **PROFESSIONAL CONSULTATION RECOMMENDED**
+        
+        Based on your message, we recommend consulting with a healthcare professional:
+        - Contact your doctor, pediatrician, or lactation consultant
+        - Seek professional medical advice for proper diagnosis and treatment
+        - This chatbot provides general information but cannot replace professional medical care
+        """)
+
     user_message = {
         "message_id": user_id,
         "session_id": st.session_state.session_id,
         "actor_type": "user",
-        "content": prompt
+        "content": prompt,
+        "is_emergency": int(is_emergency),
+        "needs_professional": int(needs_professional)
     }
     insert_message(user_message)
 
@@ -196,6 +266,8 @@ if prompt:
         "message_id": assistant_id,
         "session_id": st.session_state.session_id,
         "actor_type": "assistant",
-        "content": response
+        "content": response,
+        "is_emergency": int(is_emergency),
+        "needs_professional": int(needs_professional)
     }
     insert_message(assistant_message)
