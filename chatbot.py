@@ -60,6 +60,30 @@ if "feedback_state" not in st.session_state:
     st.session_state.feedback_state = {}
 
 # ----------------------------
+# Disclaimer Dialog
+# ----------------------------
+@st.dialog("Disclaimer")
+def show_disclaimer_dialog():
+    st.markdown("""
+        This AI model may provide inaccurate information and should not be used as 
+        the sole source of truth. Always consult with qualified healthcare professionals 
+        for medical advice and decisions.
+    """)
+
+# Check if there are any user messages yet
+has_user_messages = any(
+    msg.get("role") == "user" for msg in st.session_state.messages[1:]
+)
+
+# Show disclaimer button only before first user input
+# if not has_user_messages:
+st.button(
+    "&nbsp;:small[:gray[:material/info: Disclaimer]]",
+    type="tertiary",
+    on_click=show_disclaimer_dialog,
+)
+
+# ----------------------------
 # Render Chat History + Feedback
 # ----------------------------
 for message in st.session_state.messages[1:]:
