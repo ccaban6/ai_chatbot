@@ -167,6 +167,32 @@ for message in st.session_state.messages[1:]:
 
                 upsert_feedback(feedback_message)
 
+    # Display escalation guidance for user messages
+    is_emergency = message.get("is_emergency", False)
+    needs_professional = message.get("needs_professional", False)
+    
+    if is_emergency:
+        st.error("""
+        ⚠️ **EMERGENCY SITUATION DETECTED**
+        
+        This appears to be a medical emergency. Please:
+        - **Call 911 or go to your nearest emergency room immediately**
+        - Do not wait for a response from this chatbot
+        - Seek immediate medical attention
+        
+        This chatbot is not a substitute for emergency medical care.
+        """)
+    
+    elif needs_professional:
+        st.warning("""
+        💡 **PROFESSIONAL CONSULTATION RECOMMENDED**
+        
+        Based on your message, we recommend consulting with a healthcare professional:
+        - Contact your doctor, pediatrician, or lactation consultant
+        - Seek professional medical advice for proper diagnosis and treatment
+        - This chatbot provides general information but cannot replace professional medical care
+        """)
+        
 # ----------------------------
 # User Input
 # ----------------------------
@@ -195,22 +221,16 @@ if not has_user_messages:
 if prompt:
     user_id = str(uuid.uuid4()) # User message ID
 
+    # ----------------------------
+    # Escalation Detection
+    # ----------------------------
+    is_emergency, needs_professional = detect_escalation(prompt)
+
     # Render user message
     with st.chat_message("user"):
         st.markdown(prompt)
-
-    st.session_state.messages.append({
-        "message_id": user_id,
-        "role": "user",
-        "content": prompt
-    })
-
-
-    # ----------------------------
-    # Escalation Detection & Guidance
-    # ----------------------------
-    is_emergency, needs_professional = detect_escalation(prompt)
-    
+        
+    # Display escalation guidance for new prompt
     if is_emergency:
         st.error("""
         ⚠️ **EMERGENCY SITUATION DETECTED**
@@ -232,6 +252,15 @@ if prompt:
         - Seek professional medical advice for proper diagnosis and treatment
         - This chatbot provides general information but cannot replace professional medical care
         """)
+
+    # Store message with escalation flags for persistence
+    st.session_state.messages.append({
+        "message_id": user_id,
+        "role": "user",
+        "content": prompt,
+        "is_emergency": is_emergency,
+        "needs_professional": needs_professional
+    })
 
     user_message = {
         "message_id": user_id,
