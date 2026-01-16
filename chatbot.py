@@ -1,12 +1,37 @@
-import streamlit as st
-from openai import OpenAI
 from config.prompts import SUPPORTIVE_ASSISTANT_PROMPT, INTRODUCTION_PROMPT
+from openai import OpenAI
+from supabase import create_client, Client
+
+import streamlit as st
 import uuid
-import logger
 
 # ----------------------------
 # App Setup
 # ----------------------------
+
+# Initialize Supabase connection
+# Uses st.cache_resource to only run once.
+@st.cache_resource
+def init_connection():
+    url = st.secrets['SUPABASE_URL']
+    key = st.secrets['SUPABASE_KEY']
+    return create_client(url, key)
+
+supabase = init_connection()
+
+@st.cache_data(ttl=500)
+def run_query():
+    return supabase.table("messages").select("*").execute()
+
+def insert_message(message):
+    return supabase.table("messages").insert(message).execute()
+
+def upsert_feedback(feedback):
+    return supabase.table("feedback").upsert(feedback, on_conflict="session_id,message_id").execute()
+
+# rows = run_query()
+# print(rows.data)
+
 st.title("MilkWise Chatbot")
 
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
@@ -24,7 +49,7 @@ if "messages" not in st.session_state:
     st.session_state.messages = [
         SYSTEM_PROMPT,
         {
-            "id": intro_id,
+            "message_id": intro_id,
             "role": "assistant",
             "content": INTRODUCTION_PROMPT
         }
@@ -42,22 +67,23 @@ for message in st.session_state.messages[1:]:
         st.write(message["content"])
 
         if message["role"] == "assistant":
-            key = f"feedback_{message['id']}"
+            key = f"feedback_{message['message_id']}"
             feedback = st.feedback("thumbs", key=key)
 
-            previous_value = st.session_state.feedback_state.get(message["id"])
+            previous_value = st.session_state.feedback_state.get(message["message_id"])
 
             # Log immediately if feedback is new or changed
             if feedback is not None and feedback != previous_value:
-                st.session_state.feedback_state[message["id"]] = feedback
+                st.session_state.feedback_state[message["message_id"]] = feedback
 
-                logger.log_message(
-                    st.session_state.session_id,
-                    message["id"],          # actor_id = assistant message id
-                    "feedback",
-                    feedback,
-                    message["id"]           # feedback is tied to this message
-                )
+                feedback_message = {
+                    "feedback_id": str(uuid.uuid4()),
+                    "message_id": message["message_id"],
+                    "session_id": st.session_state.session_id,
+                    "value": feedback
+                }
+
+                upsert_feedback(feedback_message)
 
 # ----------------------------
 # User Input
@@ -65,30 +91,30 @@ for message in st.session_state.messages[1:]:
 prompt = st.chat_input("Ask a question or share a concern")
 
 if prompt:
-    user_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4()) # User message ID
 
     # Render user message
     with st.chat_message("user"):
         st.markdown(prompt)
 
     st.session_state.messages.append({
-        "id": user_id,
+        "message_id": user_id,
         "role": "user",
         "content": prompt
     })
 
-    logger.log_message(
-        st.session_state.session_id,
-        user_id,
-        "user",
-        prompt,
-        user_id
-    )
+    user_message = {
+        "message_id": user_id,
+        "session_id": st.session_state.session_id,
+        "actor_type": "user",
+        "content": prompt
+    }
+    insert_message(user_message)
 
     # ----------------------------
     # Assistant Response
     # ----------------------------
-    assistant_id = str(uuid.uuid4())
+    assistant_id = str(uuid.uuid4()) # Assistant message ID
 
     with st.chat_message("assistant"):
         stream = client.chat.completions.create(
@@ -99,15 +125,15 @@ if prompt:
         response = st.write_stream(stream)
 
     st.session_state.messages.append({
-        "id": assistant_id,
+        "message_id": assistant_id,
         "role": "assistant",
         "content": response
     })
 
-    logger.log_message(
-        st.session_state.session_id,
-        assistant_id,
-        "assistant",
-        response,
-        assistant_id
-    )
+    assistant_message = {
+        "message_id": assistant_id,
+        "session_id": st.session_state.session_id,
+        "actor_type": "assistant",
+        "content": response
+    }
+    insert_message(assistant_message)
