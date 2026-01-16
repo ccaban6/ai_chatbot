@@ -32,7 +32,7 @@ def upsert_feedback(feedback):
 # rows = run_query()
 # print(rows.data)
 
-st.title("MilkWise Chatbot")
+st.title("MilkWise AI Assistant")
 
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 

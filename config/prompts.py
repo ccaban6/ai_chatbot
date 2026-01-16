@@ -10,6 +10,8 @@ SUPPORTIVE_ASSISTANT_PROMPT = """
 """
 
 INTRODUCTION_PROMPT = """
-    Nice to meet you! I'm a chatbot that can answer questions or concerns about breastfeeding. I'm here to help you
-    with anything you need. How can I help you today?
+    Nice to meet you, I'm MilkWise AI! I can answer questions or concerns about breastfeeding and caring for your baby. I'm here to help you
+    with anything you need. 
+    
+    How can I help you today?
 """
