@@ -66,7 +66,7 @@ EMERGENCY_KEYWORDS = [
     "high fever", "very high fever", "fever over 104", "fever 104",
     "blue", "turning blue", "lips blue", "skin blue",
     "emergency", "urgent", "immediately", "right now", "asap",
-    "call 911", "911", "ambulance", "er", "emergency room"
+    "call 911", "911", "ambulance", "emergency room"
 ]
 
 PROFESSIONAL_CONSULT_KEYWORDS = [
@@ -192,7 +192,7 @@ for message in st.session_state.messages[1:]:
         - Seek professional medical advice for proper diagnosis and treatment
         - This chatbot provides general information but cannot replace professional medical care
         """)
-        
+
 # ----------------------------
 # User Input
 # ----------------------------
